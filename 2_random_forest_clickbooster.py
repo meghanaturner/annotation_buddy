@@ -4,8 +4,10 @@ import time
 from pathlib import Path
 # Third-party libraries, installable via pip
 import numpy as np
+## import matplotlib.pyplot as plt  # for threshold mask
 from scipy import ndimage as ndi
 from sklearn.ensemble import RandomForestClassifier
+## from skimage import filters, exposure  # for threshold mask
 from tifffile import imread, imwrite
 
 # Set input/output behavior
@@ -20,9 +22,28 @@ def calculate_features(data):
     features = []
     for channel in range(data.shape[0] - 1): # Ignore the labels channel
         im = data[channel, :, :].astype('float32')
+        # If you know something about your image, and would like to provide a
+        # mask as an additional feature, you can define the mask threshold here
+        # I would recommend starting with a visualization of a couple test
+        # thresholds by uncommenting the next two lines
+##        fig, ax = filters.try_all_threshold(im, figsize=(10, 6), verbose=False)
+##        plt.show()
+
+        # Define a threshold to generate a mask
+##        thresh = filters.threshold_triangle(im)
+
+        # If you'd like to visualize where the threshold is relative to
+        # all the pixel values in the image, uncomment the lines below
+##        hist, bins_center = exposure.histogram(im)
+##        plt.figure()
+##        plt.plot(bins_center, hist, lw=2)
+##        plt.axvline(thresh, color='k', ls='--')
+##        plt.show()
+
         # NB our features are chosen in a subjective and unprincipled way:
         features.extend(( # These could be calculated more efficiently...
             im,
+##            (im > thresh),  # threshold mask
             ndi.gaussian_filter(im, sigma=1),
             ndi.gaussian_filter(im, sigma=2),
             ndi.gaussian_filter(im, sigma=4),
@@ -79,7 +100,7 @@ def train_and_predict():
             for ch in x: # Set display range for each channel
                 ranges.extend((ch.min(), ch.max()))
             imwrite(debug_output_dir / (fn.stem + '_features.tif'), x,
-                    imagej=True, ijmetadata={'Ranges': tuple(ranges)})        
+                    imagej=True, ijmetadata={'Ranges': tuple(ranges)})
         # Only keep pixels that have labels:
         labels_exist = labels.ravel() != 0
         flattened_features.append(features.reshape(-1, features.shape[-1]
