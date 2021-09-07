@@ -23,6 +23,7 @@ human_labels_dir.mkdir(exist_ok=True)
 rf_labels_dir.mkdir(exist_ok=True)
 nn_labels_dir.mkdir(exist_ok=True)
 
+
 def load():
     assert data_filename.is_file(), instructions
     data = imread(str(data_filename)) # Hopefully, already 5D tzcyx order...
@@ -63,6 +64,7 @@ def load():
                 data_with_labels[t, z, -1, :, :] = neural_network_labels
     return data_with_labels
 
+
 with napari.gui_qt():
     data_with_labels = load()
     viewer = napari.Viewer(
@@ -96,10 +98,10 @@ with napari.gui_qt():
     viewer.active_layer = viewer.layers['Human labels']
     viewer.dims.set_axis_label(0, 't')
     viewer.dims.set_axis_label(1, 'z')
-    
+
     @viewer.bind_key('s')
     def save_slice(viewer):
-        t, z = viewer.dims.point[0], viewer.dims.point[1]
+        t, z = int(viewer.dims.point[0]), int(viewer.dims.point[1])
         # Save the human-annotated labels from the current slice
         filename = human_labels_dir / ('t%06i_z%06i.tif'%(t, z))
         x = data_with_labels[t, z, :-2, :, :]
