@@ -75,6 +75,23 @@ def calculate_features(data):
                          weights=(( 0, 0, -1),
                                   ( 0, 2,  0),
                                   (-1, 0,  0))),
+            # For larger objects, increase the kernel size (e.g. sigma) used to
+            # calculate features. Will increase computation time but improve
+            # results. Uncomment lines below
+##            ndi.gaussian_filter(im, sigma=4),
+##            ndi.gaussian_gradient_magnitude(im, sigma=6),
+##            ndi.sobel(ndi.gaussian_filter(im, sigma=4), axis=-1),
+##            ndi.sobel(ndi.gaussian_filter(im, sigma=4), axis=-2),
+##            ndi.gaussian_laplace(im, sigma=6),
+##            ndi.gaussian_laplace(im, sigma=8),
+##            ndi.convolve(ndi.gaussian_filter(im, sigma=6),
+##             weights=(( 0, 0, -1),
+##                      ( 0, 2,  0),
+##                      (-1, 0,  0))),
+##            ndi.convolve(ndi.gaussian_filter(im, sigma=8),
+##             weights=(( 0, 0, -1),
+##                      ( 0, 2,  0),
+##                      (-1, 0,  0)))
             ))
     return np.stack(features, axis=2) # Not my usual byteorder
 
