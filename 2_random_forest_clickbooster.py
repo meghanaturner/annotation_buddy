@@ -9,11 +9,14 @@ from scipy import ndimage as ndi
 from sklearn.ensemble import RandomForestClassifier
 ## from skimage import filters, exposure  # for threshold mask
 from tifffile import imread, imwrite
+from joblib import dump
 
 # Set input/output behavior
 input_dir = Path('./1_human_annotations')
 output_dir = Path('./2_random_forest_annotations')
 debug_output_dir = Path('./random_forest_intermediate_images')
+clf_dir = Path('./classifiers')
+clf_dir.mkdir(exist_ok=True)
 probability_threshold = 0.6 # Only annotate where you're confident
 save_debug_imgs = True
 
@@ -95,7 +98,7 @@ def calculate_features(data):
             ))
     return np.stack(features, axis=2) # Not my usual byteorder
 
-def train_and_predict():
+def train():
     # Sanity checks on input/output
     assert input_dir.is_dir()
     output_dir.mkdir(exist_ok=True)
@@ -126,8 +129,7 @@ def train_and_predict():
     # This step is a potential memory-hog:
     flattened_features = np.concatenate(flattened_features)
     flattened_labels = np.concatenate(flattened_labels)
-    assert len(np.unique(flattened_labels)) > 0, "Annotate at least 1 pixel"
-    if len(np.unique(flattened_labels)) == 1:
+    if len(np.unique(flattened_labels)) < 2:
         print('*'*10, "WARNING", '*'*10)
         print("Only", len(np.unique(flattened_labels)),
               "unique label(s) are currently annotated.")
@@ -142,8 +144,23 @@ def train_and_predict():
     clf = clf.fit(flattened_features, flattened_labels)
     print("Done training.\n")
 
-    print("Loading images, re-calculating 'features', and saving predictions.",
+    # save the random forest model so we can use it later
+    clf_filename = clf_dir / 'rf_classifier.joblib'
+    dump(clf, clf_filename)
+    print("Random forest model saved.")
+
+    return clf, input_filenames
+
+
+def predict(clf, input_filenames):
+    # Splitting off the prediction portion so it can be called separately for
+    # automated image classification
+
+    print("Loading images, calculating 'features', and saving predictions.",
           end='')
+    # input_filenames = [x for x in input_dir.iterdir() if x.suffix == '.tif']
+    assert len(input_filenames) > 0, "No annotated images to process"
+
     for fn in input_filenames:
         print('.', end='')
         data = imread(str(fn))
@@ -174,7 +191,8 @@ while True: # Process images every time input dir images change
     if mtimes != last_mtimes:
         if last_mtimes != None:
             print("New images detected in the input directory!\n")
-        train_and_predict()
+        clf, input_filenames = train()
+        predict(clf, input_filenames)
         last_mtimes = mtimes
         print("Waiting for modified input images in", input_dir, "...")
         print("Press 'r' to reload annotations")
